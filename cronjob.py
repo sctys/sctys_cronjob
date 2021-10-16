@@ -1,24 +1,27 @@
 import os
+import sys
+sys.path.append(os.environ['SCTYS_PROJECT'] + '/global_parameters')
+from global_parameters import Path
 from crontab import CronTab, CronSlices
 
 
 class Cronjob(CronTab):
 
-    USER = os.environ['USER']
-    PROJECT_PATH = os.environ['SCTYS_PROJECT']
-    ANACONDA_PATH = os.environ['CONDA_PREFIX'].split('/env')[0]
-    PYTHON_PATH = ANACONDA_PATH + '/envs/{}/bin/python'  # project_name
+    PYTHON_PATH = Path.ANACONDA_PATH + '/envs/{}/bin/python'  # project_name
     SCRIPT_FILE = '{}.py'  # script_name
+    CRON_LOG_FILE = 'cron_{}.log'  # script_name
 
     def __init__(self, project, logger):
-        super().__init__(user=self.USER)
+        super().__init__(user=Path.USER)
         self.project = project
         self.logger = logger
         self.python_path = self.PYTHON_PATH.format(project)
 
     def get_command_from_script_name(self, script_name, *args):
-        full_script_path = os.path.join(self.PROJECT_PATH, self.project, self.SCRIPT_FILE.format(script_name))
+        full_script_path = os.path.join(Path.PROJECT_FOLDER, self.project, self.SCRIPT_FILE.format(script_name))
+        cron_log_path = os.path.join(Path.LOG_FOLDER.format(self.project), self.CRON_LOG_FILE.format(script_name))
         command = ' '.join([self.python_path, full_script_path] + list(args))
+        command += ' > ' + cron_log_path + ' 2>&1'
         return command
 
     def get_cronjob_if_exist(self, script_name, *args):
