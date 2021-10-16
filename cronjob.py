@@ -10,13 +10,14 @@ class Cronjob(CronTab):
     PYTHON_PATH = ANACONDA_PATH + '/envs/{}/bin/python'  # project_name
     SCRIPT_FILE = '{}.py'  # script_name
 
-    def __init__(self, project_name):
+    def __init__(self, project, logger):
         super().__init__(user=self.USER)
-        self.project_name = project_name
-        self.python_path = self.PYTHON_PATH.format(project_name)
+        self.project = project
+        self.logger = logger
+        self.python_path = self.PYTHON_PATH.format(project)
 
     def get_command_from_script_name(self, script_name, *args):
-        full_script_path = os.path.join(self.PROJECT_PATH, self.project_name, self.SCRIPT_FILE.format(script_name))
+        full_script_path = os.path.join(self.PROJECT_PATH, self.project, self.SCRIPT_FILE.format(script_name))
         command = ' '.join([self.python_path, full_script_path] + list(args))
         return command
 
@@ -25,26 +26,26 @@ class Cronjob(CronTab):
         jobs = self.find_command(command)
         return next(jobs, None)
 
-    def set_cronjob(self, script_name, *args, time_code, logger):
+    def set_cronjob(self, script_name, *args, time_code):
         assert CronSlices.is_valid(time_code)
         cron_job = self.get_cronjob_if_exist(script_name, *args)
         if cron_job is None:
             command = self.get_command_from_script_name(script_name, *args)
-            logger.debug('Command on crontab: {}'.format(command))
+            self.logger.debug('Command on crontab: {}'.format(command))
             cron_job = self.new(command=command)
         cron_job.setall(time_code)
         assert cron_job.is_valid()
         self.write()
-        logger.info('Cron job for project {} script {} set with time setting {} and parameters {}'.format(
-            self.project_name, script_name, time_code, args))
+        self.logger.info('Cron job for project {} script {} set with time setting {} and parameters {}'.format(
+            self.project, script_name, time_code, args))
 
-    def remove_cronjob(self, script_name, *args, logger):
+    def remove_cronjob(self, script_name, *args):
         cron_job = self.get_cronjob_if_exist(script_name, *args)
         if cron_job is None:
-            logger.warning('Cron job for project {} script {} and parameters {} not found'.format(
-                self.project_name, script_name, args))
+            self.logger.warning('Cron job for project {} script {} and parameters {} not found'.format(
+                self.project, script_name, args))
         else:
             self.remove(cron_job)
             self.write()
-            logger.info('Cron job for project {} script {} and parameters {} removed'.format(
-                self.project_name, script_name, args))
+            self.logger.info('Cron job for project {} script {} and parameters {} removed'.format(
+                self.project, script_name, args))
